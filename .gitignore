@@ -1,0 +1,29 @@
+﻿# Исходные данные изображений 
+ml-dev/data/raw-img/
+ml-dev/data/raw/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+
+# Обработанные данные PyTorch
+ml-dev/data/processed/
+*.pt
+*.pth
+
+# Виртуальные окружения
+venv/
+.venv/
+env/
+
+# Кэши Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
