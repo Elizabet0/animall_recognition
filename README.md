@@ -34,7 +34,7 @@ ml-dev/
 ```
 
 ## Результаты
-- Accuracy: 61.26%
+- Accuracy: 63.42%
 
 ## Использовала:
 - Python, PyTorch, Torchvision, Pandas, NumPy, Matplotlib
