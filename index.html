@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Классификатор животных</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .container {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #4CAF50;
+            background: #f0f8f0;
+        }
+        
+        #preview {
+            max-width: 300px;
+            max-height: 300px;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;a
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>🦁 Классификатор животных</h1>
+    <p>Загрузите изображение животного, чтобы определить его вид</p>
+    
+    <div class="container">
+        <!-- Область для загрузки файла -->
+        <div class="upload-area" id="upload-area">
+            <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+            <div id="upload-text">Нажмите или перетащите изображение</div>
+            <small>Поддерживаются: JPG, PNG, GIF</small>
+        </div>
+        
+        <!-- Скрытый input для выбора файла -->
+        <input type="file" id="file-input" accept="image/*" style="display:none">
+        
+        <!-- Превью изображения -->
+        <div style="text-align: center;">
+            <img id="preview" alt="Предпросмотр">
+        </div>
+        
+        <!-- Кнопки -->
+        <div style="text-align: center;">
+            <button id="predict-btn" onclick="predict()" disabled>Определить животное</button>
+            <button id="clear-btn" onclick="clearAll()">Очистить</button>
+        </div>
+        
+        <!-- Индикатор загрузки -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Анализируем изображение...</p>
+        </div>
+        
+        <!-- Блок для результата -->
+        <div id="result" class="result"></div>
+    </div>
+    
+    <script>
+        // Элементы DOM
+        const fileInput = document.getElementById('file-input');
+        const uploadArea = document.getElementById('upload-area');
+        const uploadText = document.getElementById('upload-text');
+        const preview = document.getElementById('preview');
+        const predictBtn = document.getElementById('predict-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const loading = document.getElementById('loading');
+        const resultDiv = document.getElementById('result');
+        
+        // Текущий выбранный файл
+        let currentFile = null;
+        
+        // Нажатие на область загрузки
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Drag & Drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#4CAF50';
+            uploadArea.style.background = '#f0f8f0';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#ccc';
+            uploadArea.style.background = '';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ccc';
+            uploadArea.style.background = '';
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+        
+        // Выбор файла через input
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+        
+        // Обработка выбранного файла
+        function handleFileSelect(file) {
+            // Проверяем, что это изображение
+            if (!file.type.startsWith('image/')) {
+                showError('Пожалуйста, выберите изображение');
+                return;
+            }
+            
+            // Проверяем размер файла (макс 16MB)
+            if (file.size > 16 * 1024 * 1024) {
+                showError('Файл слишком большой. Максимум 16MB');
+                return;
+            }
+            
+            currentFile = file;
+            uploadText.textContent = file.name;
+            
+            // Показываем превью
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+            
+            // Активируем кнопку предсказания
+            predictBtn.disabled = false;
+            
+            // Очищаем предыдущий результат
+            resultDiv.style.display = 'none';
+        }
+        
+        // Функция предсказания
+        async function predict() {
+            if (!currentFile) return;
+            
+            // Показываем индикатор загрузки
+            loading.style.display = 'block';
+            resultDiv.style.display = 'none';
+            
+            // Создаем FormData для отправки файла
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            
+            try {
+                // Отправляем запрос к API
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                // Получаем результат
+                const data = await response.json();
+                
+                // Скрываем индикатор загрузки
+                loading.style.display = 'none';
+                
+                // Показываем результат
+                if (data.success) {
+                    showResult(data);
+                } else {
+                    showError(data.error || 'Ошибка при распознавании');
+                }
+                
+            } catch (error) {
+                // Ошибка сети
+                loading.style.display = 'none';
+                showError('Ошибка сети. Проверьте подключение к интернету');
+            }
+        }
+        
+        // Показать результат предсказания
+        function showResult(data) {
+            resultDiv.className = 'result success';
+            resultDiv.innerHTML = `
+                <h3>🎉 Результат:</h3>
+                <p><strong>Животное:</strong> ${data.prediction}</p>
+                <p><strong>Уверенность:</strong> ${data.confidence}%</p>
+            `;
+            resultDiv.style.display = 'block';
+        }
+        
+        // Показать ошибку
+        function showError(message) {
+            resultDiv.className = 'result error';
+            resultDiv.innerHTML = `
+                <h3>❌ Ошибка:</h3>
+                <p>${message}</p>
+            `;
+            resultDiv.style.display = 'block';
+        }
+        
+        // Очистить всё
+        function clearAll() {
+            fileInput.value = '';
+            currentFile = null;
+            preview.style.display = 'none';
+            uploadText.textContent = 'Нажмите или перетащите изображение';
+            predictBtn.disabled = true;
+            resultDiv.style.display = 'none';
+            loading.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
