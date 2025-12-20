@@ -28,6 +28,7 @@ animal-proj/
 ├── handlers.py        # FastAPI бэкенд
 ├── index.html         # Frontend
 └── requirements.txt   # Зависимости Python
+```
 
 ## Реализация
 
